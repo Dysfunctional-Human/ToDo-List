@@ -24,8 +24,8 @@ impl Task{
         };
     }
 
-    fn update_task(&mut self, new_name: String) {
-        self.task = new_name
+    fn update_task(&mut self, new_name: impl Into<String>) {
+        self.task = new_name.into();
     }
 }
 
@@ -59,7 +59,6 @@ fn add_new_task(todo_list: &mut Vec<Task>, task_name: &str) {
 
 fn remove_task(todo_list: &mut Vec<Task>, id_no: u64) {
     todo_list.retain(|task| task.id != id_no); // Keeps those tasks that don't match given id
-    println!("ToDo list updated")
 }
 
 fn get_task(todo_list: &mut Vec<Task>, id_no: u64) -> Result<&mut Task, &str> {
@@ -128,6 +127,7 @@ fn parse_arguments(args: Vec<&str>, todo_list: &mut Vec<Task>) {
                 match value.parse::<u64>() {
                     Ok(value) => {
                         remove_task(todo_list, value);
+                        println!("ToDO List updated")
                     }
                     Err(e) => {
                         println!("{}", e.to_string())
