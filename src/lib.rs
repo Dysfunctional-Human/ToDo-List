@@ -112,8 +112,9 @@ fn parse_arguments(args: Vec<&str>, todo_list: &mut Vec<Task>) {
 
     match command{
         Some(&"add") => {
-            if let Some(value) = args.get(1) {
-                add_new_task(todo_list, value);
+            if args.len() > 1 {
+                let new_todo = args[1..].join(" ");
+                add_new_task(todo_list, &new_todo);
                 display_todo(todo_list);
             } else {
                 println!("Please provide the task string")
@@ -140,8 +141,9 @@ fn parse_arguments(args: Vec<&str>, todo_list: &mut Vec<Task>) {
                 match task_id.parse::<u64>() {
                     Ok(task_id) => {
                         if let Ok(task) = get_task(todo_list, task_id) {
-                            if let Some(new_string) = args.get(2) {
-                                task.update_task(new_string.to_string());
+                            if args.len() > 2 {
+                                let updated_string = args[2..].join(" ");
+                                task.update_task(updated_string.to_string());
                             } else {
                                 println!("No new string provided")
                             }
