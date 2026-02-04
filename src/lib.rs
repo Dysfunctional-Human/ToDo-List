@@ -3,18 +3,8 @@ use std::{
     sync::atomic::{self, AtomicU64}     // thread safe counter
 };
 
-#[derive(Debug)]
-pub enum Status {
-    Ongoing,
-    Completed
-}
+use rusqlite::Connection;
 
-#[derive(Debug)]
-pub struct Task {
-    task: String,   
-    status: Status,   
-    id: u64
-}
 
 impl Task{
     fn update_status(&mut self) {
@@ -107,7 +97,7 @@ fn display_help() {
     println!("{}", help)
 }
 
-fn parse_arguments(args: Vec<&str>, todo_list: &mut Vec<Task>) {
+fn parse_arguments(args: Vec<&str>, todo_list: &mut Vec<Task>, conn: &Connection) {
     let command = args.get(0);
 
     match command{
@@ -183,8 +173,8 @@ fn parse_arguments(args: Vec<&str>, todo_list: &mut Vec<Task>) {
     }
 }
 
-pub fn run(args: Vec<&str>, commands: &mut Vec<Task>) {
-    parse_arguments(args, commands);
+pub fn run(args: Vec<&str>, commands: &mut Vec<Task>, conn: &Connection) {
+    parse_arguments(args, commands, conn);
 }
 
 // pub fn main() -> Task {
