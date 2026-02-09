@@ -1,5 +1,5 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
+// #![allow(dead_code)]
+// #![allow(unused_imports)]
 use std::process; 
 use chrono::Utc;
 // used to exit process
@@ -47,53 +47,6 @@ fn display_help() {
     println!("{}", help)
 }
 
-// fn parse_arguments(args: Vec<&str>, conn: &Connection) {
-//     let command = args.get(0);
-
-//     match command{
-//         Some(&"add") => {
-//             if args.len() > 1 {
-//                 let task_data = args[1..].join(" ");
-//                 let new_task = Task{
-//                     id: 0,
-//                     title: task_data,
-//                     status: TaskStatus::Ongoing,
-//                     created_at: Utc::now().format("%d/%m/%Y").to_string(),
-//                     priority: None,
-//                     notes: None,
-//                     updated_at: None,
-//                     completed_at: None,
-//                     deleted_at: None,
-//                     due_at: None
-//                 };
-
-//                 match create_task(conn, &new_task) {
-//                     // Todo, also display the new task after creation
-//                     Ok(()) => println!("Task Created Successfully"),
-//                     Err(e) => println!("Failed to create task: {:?}", e)
-//                 }
-//             }
-//         }
-//         Some(&"show") => {
-//         }
-//         Some(&"remove") => {
-//         }
-//         Some(&"update") => {
-//         }
-//         Some(&"toggle") => {
-//         }
-//         Some(&"exit") => {
-//             process::exit(0)
-//         }
-//         Some(&"help") => {
-//             display_help();
-//         }
-//         _ => {
-//             println!("Input a valid command")
-//         }
-//     }
-// }
-
 pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
     let mut clap_args = vec!["todo"];
     clap_args.extend(args);
@@ -127,21 +80,8 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             create_task(&conn, &task)?;
             println!("Task added successfuly");
             // Todo display created task here after creation
+            // Todo check for redundancy before creating new task
             Ok(())
         }
     }
 }
-
-// pub fn run() {
-//     parse_arguments();
-// }
-
-// pub fn main() -> Task {
-//     let tk = Task {
-//         task: "damn".to_string(),
-//         status: Status::Ongoing,
-//         id: 64
-//     };
-//     println!("hello world {:?}",tk);
-//     return tk;
-// }
