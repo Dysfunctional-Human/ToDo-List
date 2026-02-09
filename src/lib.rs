@@ -39,7 +39,7 @@ fn display_help() {
     println!("{}", help)
 }
 
-fn parse_arguments(args: Vec<&str>, todo_list: &mut Vec<Task>, conn: &Connection) {
+fn parse_arguments(args: Vec<&str>, conn: &Connection) {
     let command = args.get(0);
 
     match command{
@@ -86,8 +86,8 @@ fn parse_arguments(args: Vec<&str>, todo_list: &mut Vec<Task>, conn: &Connection
     }
 }
 
-pub fn run(args: Vec<&str>, commands: &mut Vec<Task>, conn: &Connection) {
-    parse_arguments(args, commands, conn);
+pub fn run(args: Vec<&str>, conn: &Connection) {
+    parse_arguments(args, conn);
 }
 
 // pub fn main() -> Task {

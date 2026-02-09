@@ -1,11 +1,13 @@
 use rusqlite::Connection;
-use to_do::models::Task;    // Imports the Task struct from our library
 use std::io::Write;
 use std::io::stdin; // To read user input
 use std::io::stdout;    // To display output
 mod db;
+mod cli;
+mod models;
+use to_do::run;
 
-fn runprompt(commands: &mut Vec<Task>, conn: &Connection) {
+fn runprompt(conn: &Connection) {
     loop {
         let mut output = stdout();  // Creates a handle standard output. Made mutable so it 
         // can be flushed
@@ -30,15 +32,14 @@ fn runprompt(commands: &mut Vec<Task>, conn: &Connection) {
         // }
 
         // println!("{:?}", conn);
-        to_do::run(args, commands, conn);
+        to_do::run(args, conn);
     }    
 }
 
 fn main() {
-    let mut commands: Vec<Task> = Vec::new();  // Create an empty vector of commands
     let conn = db::init_db()
                .expect("Failed to initialize the database");
-    runprompt(&mut commands, &conn);   // Passes to runprompt to fill the vector
+    runprompt(&conn);   // Passes to runprompt to fill the vector
     // let tk = to_do::main();
     // let mut td = vec![tk];
     // runprompt(&mut td);
