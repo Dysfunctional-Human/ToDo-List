@@ -18,9 +18,40 @@ pub enum TaskStatus {
     Completed
 }
 
+impl TaskStatus {
+    pub fn as_str(&self) -> &str {
+        match self {
+            TaskStatus::Ongoing => "Ongoing",
+            TaskStatus::Completed => "Completed"
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum PriorityOrder {
     Low,
     Medium,
     High
+}
+
+impl PriorityOrder {
+    pub fn as_str(&self) -> &str {
+        match self {
+            PriorityOrder::High => "High",
+            PriorityOrder::Medium => "Medium",
+            PriorityOrder::Low => "Low"
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum TaskError {
+    DatabaseError(rusqlite::Error),
+    InvalidInput(String)
+}
+
+impl From<rusqlite::Error> for TaskError {
+    fn from(err: rusqlite::Error) -> TaskError {
+        TaskError::DatabaseError(err)
+    }
 }

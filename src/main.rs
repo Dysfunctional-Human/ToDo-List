@@ -1,5 +1,5 @@
 use rusqlite::Connection;
-use to_do::Task;    // Imports the Task struct from our library
+use to_do::models::Task;    // Imports the Task struct from our library
 use std::io::Write;
 use std::io::stdin; // To read user input
 use std::io::stdout;    // To display output
