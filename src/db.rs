@@ -15,7 +15,7 @@ pub fn init_db() -> Result<Connection> {
             deleted_at      TEXT,
             due_at          TEXT,
             priority        TEXT,
-            extra_notes     TEXT
+            notes     TEXT
         );
         ",
     )?;

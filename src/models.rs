@@ -1,3 +1,9 @@
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+#![allow(dead_code)]
+
+use clap::ValueEnum;
+
 #[derive(Debug)]
 pub struct Task {
     pub id: u64,
@@ -9,10 +15,10 @@ pub struct Task {
     pub deleted_at: Option<String>,
     pub due_at: Option<String>,
     pub priority: Option<PriorityOrder>,
-    pub extra_notes: Option<String>
+    pub notes: Option<String>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, ValueEnum)]
 pub enum TaskStatus {
     Ongoing,
     Completed
@@ -27,7 +33,7 @@ impl TaskStatus {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, ValueEnum)]
 pub enum PriorityOrder {
     Low,
     Medium,

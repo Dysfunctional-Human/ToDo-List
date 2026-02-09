@@ -5,9 +5,8 @@ use std::io::stdout;    // To display output
 mod db;
 mod cli;
 mod models;
-use to_do::run;
 
-fn runprompt(conn: &Connection) {
+fn runprompt(_conn: &Connection) {
     loop {
         let mut output = stdout();  // Creates a handle standard output. Made mutable so it 
         // can be flushed
@@ -31,8 +30,16 @@ fn runprompt(conn: &Connection) {
         //     println!("{}", arg)
         // }
 
+        if args.is_empty() {
+            continue;
+        }
+
+        match to_do::parse_arguments(args) {
+            Ok(()) => {},
+            Err(e) => eprintln!("Error: {:?}", e)
+        }
         // println!("{:?}", conn);
-        to_do::run(args, conn);
+        // to_do::run();
     }    
 }
 
