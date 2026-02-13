@@ -22,10 +22,14 @@ pub enum Commands {
 
         /// Due date in dd/mm/yyyy
         #[arg(long)]
-        due_at: Option<String>,
+        due: Option<String>,
 
         /// Extra notes
         #[arg(long, num_args = 1..)]
         notes: Option<Vec<String>>
     },
+    Show {
+        /// Task id
+        id: u64
+    }
 }

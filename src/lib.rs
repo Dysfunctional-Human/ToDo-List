@@ -1,35 +1,15 @@
-// #![allow(dead_code)]
+#![allow(dead_code)]
 // #![allow(unused_imports)]
-use std::process; 
-use chrono::Utc;
 // used to exit process
-use rusqlite::{params, Connection};
+// use std::process;   For exit command
+// use rusqlite::{params, Connection};
 mod models;
-use models::{Task, TaskError, TaskStatus,};
+use models::{Task, TaskError, TaskStatus};
 pub mod cli;
 use cli::{Cli, Commands};
 use clap::Parser;
 mod db;
-use db::init_db;
-
-fn create_task(
-    conn: &Connection,
-    new_task: &Task
-) -> Result<(), TaskError> {
-    let priority = new_task.priority.as_ref().map(|p| p.as_str());
-    let now = Utc::now().format("%d/%m/%Y").to_string();
-
-    conn.execute(
-        "INSERT INTO tasks (title, status, created_at, due_at,
-                            priority, notes)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-        "
-        , params![&new_task.title, &new_task.status.as_str(), now, 
-                  &new_task.due_at, priority, &new_task.notes]
-    )?;
-
-    Ok(())
-}
+use db::{init_db, create_task, show_task_by_id, check_for_redundancy};
 
 fn display_help() {
     let help: &str = "
@@ -60,7 +40,7 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
     let conn = init_db()?;
 
     match cli.command {
-        Commands::Add { title, priority, due_at, notes } => {
+        Commands::Add { title, priority, due, notes } => {
             let task_name = title.join(" ");
             let extras = notes.map(|n| n.join(" "));
 
@@ -72,15 +52,20 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
                 updated_at: None,
                 completed_at: None,
                 deleted_at: None,
-                due_at: due_at,
+                due_at: due,
                 priority: priority,
                 notes: extras
             };
-
-            create_task(&conn, &task)?;
-            println!("Task added successfuly");
-            // Todo display created task here after creation
+            check_for_redundancy(&conn, &task)?;
+            let new_id = create_task(&conn, &task)?;
+            let new_task = show_task_by_id(&conn, new_id)?;
+            println!("Task added successfully: {}", new_task);
             // Todo check for redundancy before creating new task
+            Ok(())
+        },
+        Commands::Show { id } => {
+            let task = show_task_by_id(&conn, id)?;
+            println!("{}", task);
             Ok(())
         }
     }
