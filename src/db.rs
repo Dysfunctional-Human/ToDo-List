@@ -96,7 +96,7 @@ pub fn check_for_redundancy(
 ) -> Result<(), TaskError> {
     match conn.query_row(
         "SELECT id FROM tasks WHERE title = ?1 OR (notes = ?2 AND notes IS NOT NULL)",
-        params![new_task.title],
+        params![new_task.title, new_task.notes],
         |row| Ok(row.get::<_, i64>(0)?)
     ) {
         Ok(_) => return Err(TaskError::DuplicateTask("Task can't have duplicate title and/or notes".to_string())),
