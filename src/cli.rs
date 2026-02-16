@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 use crate::models::PriorityOrder;
-
 #[derive(Parser)]
 #[command(name="todo")]
 #[command(about="A simple todo list application")]
@@ -60,5 +59,7 @@ pub enum Commands {
         /// Show only deleted tasks
         #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "high"])]
         deleted: bool
-    }
+    },
+    Clear {},
+    Exit {}
 }

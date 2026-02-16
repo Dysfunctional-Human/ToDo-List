@@ -2,6 +2,7 @@
 use rusqlite::{Connection, Row, params};
 use crate::models::{Task, TaskError, TaskStatus, PriorityOrder};
 use chrono::Utc;
+use std::process::{self, Command};
 
 pub fn init_db() -> rusqlite::Result<Connection> {
     let conn = Connection::open("todo.db")?;
@@ -189,4 +190,19 @@ pub fn get_deleted_tasks(
     let rows = query.query_map([], |row| parse_all_columns(row))?;
     let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
     Ok(tasks)
+}
+
+pub fn clear_screen() {
+    #[cfg(target_os = "windows")]
+    {
+        let _ = Command::new("cmd").args(["/C", "cls"]).status();
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = Command::new("clear").status();
+    }
+}
+
+pub fn exit_app() {
+    process::exit(0);
 }

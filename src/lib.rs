@@ -1,8 +1,5 @@
 #![allow(dead_code)]
 // #![allow(unused_imports)]
-// used to exit process
-// use std::process;   For exit command
-// use rusqlite::{params, Connection};
 mod models;
 use models::{Task, TaskError, TaskStatus};
 pub mod cli;
@@ -10,7 +7,8 @@ use cli::{Cli, Commands};
 use clap::Parser;
 mod db;
 use db::{init_db, create_task, show_task_by_id, check_for_redundancy, get_tasks_by_status, 
-         get_tasks_by_priority, get_all_tasks, get_deleted_tasks};
+         get_tasks_by_priority, get_all_tasks, get_deleted_tasks, clear_screen, exit_app
+    };
 
 fn display_help() {
     let help: &str = "
@@ -96,6 +94,14 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
                 }
             }
             Ok(())
-        }
+        },
+        Commands::Clear {} => { 
+            clear_screen();
+            Ok(())
+        },
+        Commands::Exit {} => { 
+            exit_app();
+            Ok(())
+         }
     }
 }
