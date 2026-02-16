@@ -79,18 +79,21 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
                 for task in by_priority {
                     println!("{}", task)
                 }
-            } else if all {
-                let all_tasks = get_all_tasks(&conn)?;
-                for task in all_tasks {
-                    println!("{}", task)
-                }
             } else if deleted {
                 let deleted_tasks = get_deleted_tasks(&conn)?;
                 for task in deleted_tasks {
                     println!("{}", task)
                 }
+            }  else if all {
+                let all_tasks = get_all_tasks(&conn)?;
+                for task in all_tasks {
+                    println!("{}", task)
+                }
             } else {
-                return Err(TaskError::InvalidInput("Invalid Command".to_string()));
+                let by_status = get_tasks_by_status(&conn, false, false, true)?;
+                for task in by_status {
+                    println!("{}", task)
+                }
             }
             Ok(())
         }

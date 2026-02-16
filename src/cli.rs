@@ -58,7 +58,7 @@ pub enum Commands {
         high: bool,
 
         /// Show only deleted tasks
-        #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "high", "all"])]
+        #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "high"])]
         deleted: bool
     }
 }

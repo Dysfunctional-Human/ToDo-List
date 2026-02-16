@@ -2,6 +2,7 @@
 name = "to_do"
 version = "0.1.0"
 edition = "2024"
+default-run = "to_do"
 
 [dependencies]
 rusqlite = "0.30"

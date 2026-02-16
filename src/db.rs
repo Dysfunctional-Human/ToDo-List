@@ -176,7 +176,7 @@ pub fn get_tasks_by_priority(
 pub fn get_all_tasks(
     conn: &Connection
 ) -> Result<Vec<Task>, TaskError> {
-    let mut query = conn.prepare("SELECT * FROM tasks")?;
+    let mut query = conn.prepare("SELECT * FROM tasks WHERE deleted_at IS NULL")?;
     let rows = query.query_map([], |row| parse_all_columns(row))?;
     let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
     Ok(tasks)
