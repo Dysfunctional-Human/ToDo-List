@@ -31,5 +31,34 @@ pub enum Commands {
     Show {
         /// Task id
         id: u64
+    },
+    List {
+        /// Show all tasks including deleted
+        #[arg(long)]
+        all: bool,
+
+        /// Show only completed tasks
+        #[arg(long, conflicts_with_all = ["ongoing", "low", "medium", "high", "deleted"])]
+        completed: bool,
+        
+        /// Show only Ongoing tasks 
+        #[arg(long, conflicts_with_all = ["completed", "low", "medium", "high", "deleted"])]
+        ongoing: bool,
+
+        /// Show only low priority tasks
+        #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "high", "deleted"])]
+        low: bool,
+        
+        /// Show only medium priority tasks
+        #[arg(long, conflicts_with_all = ["completed", "ongoing", "low", "high", "deleted"])]
+        medium: bool,
+
+        /// Show only high priority tasks
+        #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "low", "deleted"])]
+        high: bool,
+
+        /// Show only deleted tasks
+        #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "high", "all"])]
+        deleted: bool
     }
 }

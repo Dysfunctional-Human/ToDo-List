@@ -9,7 +9,7 @@ pub mod cli;
 use cli::{Cli, Commands};
 use clap::Parser;
 mod db;
-use db::{init_db, create_task, show_task_by_id, check_for_redundancy};
+use db::{init_db, create_task, show_task_by_id, check_for_redundancy, get_tasks_by_status};
 
 fn display_help() {
     let help: &str = "
@@ -60,13 +60,27 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             let new_id = create_task(&conn, &task)?;
             let new_task = show_task_by_id(&conn, new_id)?;
             println!("Task added successfully: {}", new_task);
-            // Todo check for redundancy before creating new task
             Ok(())
         },
         Commands::Show { id } => {
             let task = show_task_by_id(&conn, id)?;
             println!("{}", task);
             Ok(())
+        },
+        Commands::List { all, completed, ongoing, low, medium, high, deleted} => {
+            if completed || ongoing {
+                let by_status = get_tasks_by_status(&conn, all, completed, ongoing)?;
+                for task in by_status {
+                    println!("{}", task)
+                }
+                Ok(())
+            } else if low || medium || high {
+
+            } else if all {
+
+            } else if deleted {
+
+            }
         }
     }
 }
