@@ -9,7 +9,8 @@ pub mod cli;
 use cli::{Cli, Commands};
 use clap::Parser;
 mod db;
-use db::{init_db, create_task, show_task_by_id, check_for_redundancy, get_tasks_by_status};
+use db::{init_db, create_task, show_task_by_id, check_for_redundancy, get_tasks_by_status, 
+         get_tasks_by_priority, get_all_tasks, get_deleted_tasks};
 
 fn display_help() {
     let help: &str = "
@@ -73,14 +74,25 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
                 for task in by_status {
                     println!("{}", task)
                 }
-                Ok(())
             } else if low || medium || high {
-
+                let by_priority = get_tasks_by_priority(&conn, low, medium, high, all)?;
+                for task in by_priority {
+                    println!("{}", task)
+                }
             } else if all {
-
+                let all_tasks = get_all_tasks(&conn)?;
+                for task in all_tasks {
+                    println!("{}", task)
+                }
             } else if deleted {
-
+                let deleted_tasks = get_deleted_tasks(&conn)?;
+                for task in deleted_tasks {
+                    println!("{}", task)
+                }
+            } else {
+                return Err(TaskError::InvalidInput("Invalid Command".to_string()));
             }
+            Ok(())
         }
     }
 }

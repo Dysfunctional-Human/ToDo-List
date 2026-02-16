@@ -1,10 +1,9 @@
 #![allow(dead_code)]
-// #![allow(unused_imports)]
-use rusqlite::{Connection, Result, Row, params};
+use rusqlite::{Connection, Row, params};
 use crate::models::{Task, TaskError, TaskStatus, PriorityOrder};
 use chrono::Utc;
 
-pub fn init_db() -> Result<Connection> {
+pub fn init_db() -> rusqlite::Result<Connection> {
     let conn = Connection::open("todo.db")?;
 
     conn.execute_batch(
@@ -129,17 +128,65 @@ pub fn get_tasks_by_status(
     completed: bool,
     ongoing: bool
 ) -> Result<Vec<Task>, TaskError> {
-    match all {
-        true => {
-            let mut query = conn.prepare("SELECT * FROM tasks WHERE status = ?1")?;
-        } false => {
-            let mut query = conn.prepare("SELECT * FROM tasks WHERE status = ?1 AND deleted_at IS NULL")?;
-        }
-    }    
-    let rows = query.query_map([{
-        if completed {"Completed"}
-        else if ongoing {"Ongoing"}
-    }], parse_all_columns(row))?;
+    let status_str = if completed {
+        "Completed"
+    } else if ongoing {
+        "Ongoing"
+    } else {
+        return Err(TaskError::InvalidInput("Must specify either completed or ongoing".to_string()));
+    };
+    let mut query = if all {
+        conn.prepare("SELECT * FROM tasks WHERE status = ?1")?
+    } else {
+        conn.prepare("SELECT * FROM tasks WHERE status = ?1 AND deleted_at IS NULL")?
+    };
 
-    Ok(rows)
+    let rows = query.query_map([status_str], |row| parse_all_columns(row))?;
+    let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
+    Ok(tasks)
+}
+
+pub fn get_tasks_by_priority(
+    conn: &Connection,
+    low: bool,
+    medium: bool,
+    high: bool,
+    all: bool 
+) -> Result<Vec<Task>, TaskError> {
+    let priority_str = if low {
+        "Low"
+    } else if medium {
+        "Medium"
+    } else if high{
+        "High"
+    } else {
+        return Err(TaskError::InvalidInput("Must specify either low, medium or high".to_string()));
+    };
+
+    let mut query = if all {
+        conn.prepare("SELECT * FROM tasks WHERE priority = ?1")?
+    } else {
+        conn.prepare("SELECT * FROM tasks WHERE priority = ?1 AND deleted_at IS NULL")?
+    };
+    let rows = query.query_map([priority_str], |row| parse_all_columns(row))?;
+    let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
+    Ok(tasks)
+}
+
+pub fn get_all_tasks(
+    conn: &Connection
+) -> Result<Vec<Task>, TaskError> {
+    let mut query = conn.prepare("SELECT * FROM tasks")?;
+    let rows = query.query_map([], |row| parse_all_columns(row))?;
+    let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
+    Ok(tasks)
+}
+
+pub fn get_deleted_tasks(
+    conn: &Connection
+) -> Result<Vec<Task>, TaskError> {
+    let mut query = conn.prepare("SELECT * FROM tasks WHERE deleted_at IS NOT NULL")?;
+    let rows = query.query_map([], |row| parse_all_columns(row))?;
+    let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
+    Ok(tasks)
 }
