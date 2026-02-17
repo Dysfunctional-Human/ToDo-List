@@ -2,9 +2,7 @@ use rusqlite::Connection;
 use std::io::Write;
 use std::io::stdin; // To read user input
 use std::io::stdout;    // To display output
-mod db;
-mod cli;
-mod models;
+use to_do::db::init_db;  // Use the library crate's db module
 
 fn runprompt(_conn: &Connection) {
     loop {
@@ -44,7 +42,7 @@ fn runprompt(_conn: &Connection) {
 }
 
 fn main() {
-    let conn = db::init_db()
+    let conn = init_db()
                .expect("Failed to initialize the database");
     runprompt(&conn);   // Passes to runprompt to fill the vector
     // let tk = to_do::main();

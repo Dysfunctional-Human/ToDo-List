@@ -1,7 +1,6 @@
-#![allow(dead_code)]
 use rusqlite::{Connection, Row, params};
 use crate::models::{Task, TaskError, TaskStatus, PriorityOrder};
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use std::process::{self, Command};
 
 pub fn init_db() -> rusqlite::Result<Connection> {
@@ -202,6 +201,77 @@ pub fn update_status(
         params![updated_status.as_str(), id]
     )?;
     Ok(())
+}
+
+pub fn soft_delete_task(
+    conn: &Connection,
+    id: u64
+) -> Result<(), TaskError> {
+    conn.execute(
+        "UPDATE tasks SET deleted_at = ?1 WHERE id = ?2",
+        params![Utc::now().format("%d/%m/%Y").to_string(), id]
+    )?;
+    Ok(())
+}
+
+pub fn restore_task(
+    conn: &Connection,
+    id: u64
+) -> Result<(), TaskError> {
+    conn.execute(
+        "UPDATE tasks SET deleted_at = NULL WHERE id = ?1",
+        params![id]
+    )?;
+    Ok(())
+}
+
+pub fn purge_task(
+    conn: &Connection,
+    id: Option<u64>,
+    all: bool
+) -> Result<(), TaskError> {
+    if let Some(task_id) = id {
+        check_task_exists_by_id(conn, task_id)?;
+        conn.execute(
+            "DELETE FROM tasks WHERE id = ?1",
+            params![task_id]
+        )?;
+    } else if all {
+        conn.execute(
+            "DELETE FROM tasks WHERE deleted_at IS NOT NULL",
+            params![]
+        )?;
+    } else {
+        return Err(TaskError::InvalidInput("Must specify either --all or a valid id".to_string()));
+    }
+
+    Ok(())
+}
+
+pub fn get_due_tasks(
+    conn: &Connection,
+    today: bool,
+    tomorrow: bool
+) -> Result<Vec<Task>, TaskError> {
+    let mut query = if today && tomorrow {
+        conn.prepare("SELECT * FROM tasks WHERE due_at = ?1 or due_at = ?2")
+    } else if today {
+        conn.prepare("SELECT * FROM tasks WHERE due_at = ?1")
+    } else if tomorrow {
+        conn.prepare("SELECT * FROM tasks WHERE due_at = ?2")
+    } else {
+        return Err(TaskError::InvalidInput("Must specify either --today or --tomorrow".to_string()));
+    }?;
+
+    let rows = query.query_map(params![
+        Utc::now().format("%d/%m/%Y").to_string(),
+        (Utc::now() + Duration::days(1)).format("%d/%m/%Y").to_string()
+    ],
+    |row| parse_all_columns(row)
+    )?;
+    let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
+
+    Ok(tasks)    
 }
 
 pub fn clear_screen() {

@@ -1,6 +1,3 @@
-// #![allow(unused_variables)]
-// #![allow(unused_imports)]
-#![allow(dead_code)]
 use clap::ValueEnum;
 use core::fmt;
 
@@ -22,7 +19,7 @@ impl fmt::Display for Task {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Task #{}: {} [{}] - Created: {}{}{}",
+            "Task #id: {} -> {} [{}] - Created: {}{}{}",
             self.id,
             self.title,
             self.status.as_str(),

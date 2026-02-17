@@ -68,6 +68,32 @@ pub enum Commands {
         /// Task id
         id: u64
     },
+    Delete {
+        /// Task id
+        id: u64
+    },
+    Restore {
+        /// Task id
+        id: u64
+    },
+    Purge {
+        // Permanently delete task by id (works on both - existing and soft-deleted tasks)
+        id: Option<u64>,
+
+        // Permanently delete all soft deleted tasks
+        #[arg(long, conflicts_with_all=["id"])]
+        all: bool
+    },
+    Due {
+        /// Show tasks due today
+        #[arg(long)]
+        today: bool,
+        
+        /// Show tasks due tomorrow
+        #[arg(long)]
+        tomorrow: bool
+    },
+    Help {},
     Clear {},
     #[command(alias="quit")]
     Exit {}

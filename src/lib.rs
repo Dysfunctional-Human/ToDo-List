@@ -1,14 +1,15 @@
-#![allow(dead_code)]
-// #![allow(unused_imports)]
-mod models;
-use models::{Task, TaskError, TaskStatus};
-pub mod cli;
-use cli::{Cli, Commands};
 use clap::Parser;
-mod db;
-use db::{init_db, create_task, show_task_by_id, check_for_redundancy, get_tasks_by_status, 
-         get_tasks_by_priority, get_all_tasks, get_deleted_tasks, clear_screen, exit_app, update_status
-    };
+mod cli;
+mod models;
+pub mod db;
+use crate::{
+    models::{Task, TaskError, TaskStatus},
+    cli::{Cli, Commands},
+    db::{init_db, create_task, show_task_by_id, check_for_redundancy, get_tasks_by_status,
+         get_tasks_by_priority, soft_delete_task, get_all_tasks, get_deleted_tasks, clear_screen,
+         exit_app, update_status, restore_task, get_due_tasks, check_task_exists_by_id, purge_task
+    }
+};
 
 fn display_help() {
     let help: &str = "
@@ -69,51 +70,84 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
         Commands::List { all, completed, ongoing, low, medium, high, deleted} => {
             if completed || ongoing {
                 let by_status = get_tasks_by_status(&conn, all, completed, ongoing)?;
-                for task in by_status {
-                    println!("{}", task)
+                for (i, task) in by_status.iter().enumerate() {
+                    println!("{}. {}", i+1, task)
                 }
             } else if low || medium || high {
                 let by_priority = get_tasks_by_priority(&conn, low, medium, high, all)?;
-                for task in by_priority {
-                    println!("{}", task)
+                for (i, task) in by_priority.iter().enumerate() {
+                    println!("{}. {}", i+1, task)
                 }
             } else if deleted {
                 let deleted_tasks = get_deleted_tasks(&conn)?;
-                for task in deleted_tasks {
-                    println!("{}", task)
+                for (i, task) in deleted_tasks.iter().enumerate() {
+                    println!("{}. {}", i+1, task)
                 }
             }  else if all {
                 let all_tasks = get_all_tasks(&conn)?;
-                for task in all_tasks {
-                    println!("{}", task)
+                for (i, task) in all_tasks.iter().enumerate() {
+                    println!("{}. {}", i+1, task)
                 }
             } else {
                 let by_status = get_tasks_by_status(&conn, false, false, true)?;
-                for task in by_status {
-                    println!("{}", task)
+                for (i, task) in by_status.iter().enumerate() {
+                    println!("{}. {}", i+1, task)
                 }
             }
             Ok(())
         },
         Commands::Done { id } => {
+            check_task_exists_by_id(&conn, id)?;
             update_status(&conn, id, TaskStatus::Completed)?;
             let new_task = show_task_by_id(&conn, id)?;
             println!("Updated Task: {}", new_task);
             Ok(())
         },
         Commands::Reopen { id } => {
+            check_task_exists_by_id(&conn, id)?;
             update_status(&conn, id, TaskStatus::Ongoing)?;
             let new_task = show_task_by_id(&conn, id)?;
             println!("Updated Task: {}", new_task);
+            Ok(())
+        },
+        Commands::Delete { id } => {
+            check_task_exists_by_id(&conn, id)?;
+            soft_delete_task(&conn, id)?;
+            println!("Task deleted successfully");
+            Ok(())
+        },
+        Commands::Restore { id } => {
+            check_task_exists_by_id(&conn, id)?;
+            restore_task(&conn, id)?;
+            let task = show_task_by_id(&conn, id)?;
+            println!("Restored Task: {}", task);
+            Ok(())
+        },
+        Commands::Purge { id, all } => {
+            purge_task(&conn, id, all)?;
+            println!("Task(s) permanently deleted");
+            Ok(())
+        },
+        Commands::Due { today, tomorrow } => {
+            let due_tasks = get_due_tasks(&conn, today, tomorrow)?;
+            for (i, task) in due_tasks.iter().enumerate() {
+                println!("{}. {}", i+1, task)
+            }
+            Ok(())
+        },
+        Commands::Help {  } => {
+            display_help();
             Ok(())
         },
         Commands::Clear {} => { 
             clear_screen();
             Ok(())
         },
-        Commands::Exit {} => { 
+        Commands::Exit {} => {
+            println!("Bye Bye...👋"); 
             exit_app();
             Ok(())
         }
+        // ToDo - 1. Updated_at for the commands, completed_at for the commands
     }
 }
