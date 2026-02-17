@@ -196,10 +196,19 @@ pub fn update_status(
     id: u64,
     updated_status: TaskStatus
 ) -> Result<(), TaskError> {
-    conn.execute(
-        "UPDATE tasks SET status = ?1 WHERE id = ?2", 
-        params![updated_status.as_str(), id]
-    )?;
+    if updated_status == TaskStatus::Completed {
+        conn.execute(
+            "UPDATE tasks SET status = ?1 updated_at = ?1 completed_at = ?1 WHERE id = ?2", 
+            params![updated_status.as_str(), id]
+        )?;
+    } else if updated_status == TaskStatus::Ongoing {
+        conn.execute(
+            "UPDATE tasks SET status = ?1 updated_at = ?1 completed_at = NULL WHERE id = ?2", 
+            params![updated_status.as_str(), id]
+        )?; 
+    } else {
+        return  Err(TaskError::InvalidInput("Invalid Task Status".to_string()));
+    }
     Ok(())
 }
 
@@ -208,7 +217,7 @@ pub fn soft_delete_task(
     id: u64
 ) -> Result<(), TaskError> {
     conn.execute(
-        "UPDATE tasks SET deleted_at = ?1 WHERE id = ?2",
+        "UPDATE tasks SET deleted_at = ?1 updated_at = ?1 WHERE id = ?2",
         params![Utc::now().format("%d/%m/%Y").to_string(), id]
     )?;
     Ok(())
@@ -219,8 +228,8 @@ pub fn restore_task(
     id: u64
 ) -> Result<(), TaskError> {
     conn.execute(
-        "UPDATE tasks SET deleted_at = NULL WHERE id = ?1",
-        params![id]
+        "UPDATE tasks SET deleted_at = NULL updated_at = ?2 WHERE id = ?1",
+        params![id, Utc::now().format("%d/%m/%Y").to_string()]
     )?;
     Ok(())
 }

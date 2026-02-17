@@ -30,7 +30,7 @@ impl fmt::Display for Task {
     }
 }
 
-#[derive(Debug, Clone, ValueEnum)]
+#[derive(Debug, Clone, ValueEnum, PartialEq)]
 pub enum TaskStatus {
     Ongoing,
     Completed
