@@ -60,6 +60,15 @@ pub enum Commands {
         #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "high"])]
         deleted: bool
     },
+    Done {
+        /// Task id
+        id: u64
+    },
+    Reopen {
+        /// Task id
+        id: u64
+    },
     Clear {},
+    #[command(alias="quit")]
     Exit {}
 }

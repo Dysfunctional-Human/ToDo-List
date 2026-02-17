@@ -7,7 +7,7 @@ use cli::{Cli, Commands};
 use clap::Parser;
 mod db;
 use db::{init_db, create_task, show_task_by_id, check_for_redundancy, get_tasks_by_status, 
-         get_tasks_by_priority, get_all_tasks, get_deleted_tasks, clear_screen, exit_app
+         get_tasks_by_priority, get_all_tasks, get_deleted_tasks, clear_screen, exit_app, update_status
     };
 
 fn display_help() {
@@ -95,6 +95,18 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             }
             Ok(())
         },
+        Commands::Done { id } => {
+            update_status(&conn, id, TaskStatus::Completed)?;
+            let new_task = show_task_by_id(&conn, id)?;
+            println!("Updated Task: {}", new_task);
+            Ok(())
+        },
+        Commands::Reopen { id } => {
+            update_status(&conn, id, TaskStatus::Ongoing)?;
+            let new_task = show_task_by_id(&conn, id)?;
+            println!("Updated Task: {}", new_task);
+            Ok(())
+        },
         Commands::Clear {} => { 
             clear_screen();
             Ok(())
@@ -102,6 +114,6 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
         Commands::Exit {} => { 
             exit_app();
             Ok(())
-         }
+        }
     }
 }

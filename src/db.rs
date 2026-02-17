@@ -192,6 +192,18 @@ pub fn get_deleted_tasks(
     Ok(tasks)
 }
 
+pub fn update_status(
+    conn: &Connection,
+    id: u64,
+    updated_status: TaskStatus
+) -> Result<(), TaskError> {
+    conn.execute(
+        "UPDATE tasks SET status = ?1 WHERE id = ?2", 
+        params![updated_status.as_str(), id]
+    )?;
+    Ok(())
+}
+
 pub fn clear_screen() {
     #[cfg(target_os = "windows")]
     {
