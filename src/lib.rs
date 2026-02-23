@@ -3,12 +3,8 @@ mod cli;
 mod models;
 pub mod db;
 use crate::{
-    models::{Task, TaskError, TaskStatus},
-    cli::{Cli, Commands},
-    db::{init_db, create_task, show_task_by_id, check_for_redundancy, get_tasks_by_status,
-         get_tasks_by_priority, soft_delete_task, get_all_tasks, get_deleted_tasks, clear_screen,
-         exit_app, update_status, restore_task, get_due_tasks, check_task_exists_by_id, purge_task
-    }
+    cli::{Cli, Commands}, db::{check_for_redundancy, check_task_exists_by_id, clear_screen, create_task, exit_app, get_all_tasks, get_deleted_tasks, get_due_tasks, get_tasks_by_priority, get_tasks_by_status, init_db, purge_task, restore_task, show_task_by_id, soft_delete_task, update_status, update_task_by_id
+    }, models::{Task, TaskError, TaskStatus}
 };
 
 fn display_help() {
@@ -133,6 +129,16 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             for (i, task) in due_tasks.iter().enumerate() {
                 println!("{}. {}", i+1, task)
             }
+            Ok(())
+        },
+        Commands::Update { id, title, due, priority, notes } => {
+            check_task_exists_by_id(&conn, id)?;
+            let new_title = title.map(|n| n.join(" "));
+            let new_notes = notes.map(|n| n.join(" "));
+
+            update_task_by_id(&conn, id, new_title, due, priority, new_notes)?;
+            let updated_task = show_task_by_id(&conn, id)?;
+            println!("Update Successful! Task: {}", updated_task);
             Ok(())
         },
         Commands::Help {  } => {

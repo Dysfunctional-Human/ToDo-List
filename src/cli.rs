@@ -93,6 +93,26 @@ pub enum Commands {
         #[arg(long)]
         tomorrow: bool
     },
+    Update {
+        /// id
+        id: u64,
+
+        /// title
+        #[arg(long, num_args = 1..)]
+        title: Option<Vec<String>>,
+
+        /// due
+        #[arg(long)]
+        due: Option<String>,
+
+        /// priority
+        #[arg(long, value_enum)]
+        priority: Option<PriorityOrder>,
+
+        /// notes
+        #[arg(long, num_args = 1..)]
+        notes: Option<Vec<String>>
+    },
     Help {},
     Clear {},
     #[command(alias="quit")]

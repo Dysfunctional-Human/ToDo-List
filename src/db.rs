@@ -196,15 +196,16 @@ pub fn update_status(
     id: u64,
     updated_status: TaskStatus
 ) -> Result<(), TaskError> {
+    let date = Utc::now().format("%d/%m/%Y").to_string();
     if updated_status == TaskStatus::Completed {
         conn.execute(
-            "UPDATE tasks SET status = ?1 updated_at = ?1 completed_at = ?1 WHERE id = ?2", 
-            params![updated_status.as_str(), id]
+            "UPDATE tasks SET status = ?1, updated_at = ?3, completed_at = ?3 WHERE id = ?2", 
+            params![updated_status.as_str(), id, date]
         )?;
     } else if updated_status == TaskStatus::Ongoing {
         conn.execute(
-            "UPDATE tasks SET status = ?1 updated_at = ?1 completed_at = NULL WHERE id = ?2", 
-            params![updated_status.as_str(), id]
+            "UPDATE tasks SET status = ?1, updated_at = ?3, completed_at = NULL WHERE id = ?2", 
+            params![updated_status.as_str(), id, date]
         )?; 
     } else {
         return  Err(TaskError::InvalidInput("Invalid Task Status".to_string()));
@@ -281,6 +282,53 @@ pub fn get_due_tasks(
     let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
 
     Ok(tasks)    
+}
+
+pub fn update_task_by_id(
+    conn: &Connection,
+    id: u64,
+    title: Option<String>,
+    due: Option<String>,
+    priority: Option<PriorityOrder>,
+    notes: Option<String>
+) -> Result<(), TaskError> {
+    let date = Utc::now().format("%d/%m/%Y").to_string();
+    let mut set_clauses: Vec<String> = vec![];
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = vec![];
+
+    if let Some(t) = title {
+        set_clauses.push("title = ?".to_string());
+        params.push(Box::new(t));
+    }
+
+    if let Some(d) = due {
+        set_clauses.push("due_at = ?".to_string());
+        params.push(Box::new(d));
+    }
+
+    if let Some(p) = priority {
+        set_clauses.push("priority = ?".to_string());
+        params.push(Box::new(p.as_str().to_string()));
+    }
+
+    if let Some(n) = notes {
+        set_clauses.push("notes = ?".to_string());
+        params.push(Box::new(n));
+    }
+
+    set_clauses.push("updated_at = ?".to_string());
+    params.push(Box::new(date));
+
+    if set_clauses.len() == 1 {
+        return Err(TaskError::InvalidInput("Nothing to update".to_string()));
+    }
+
+    params.push(Box::new(id));
+
+    let sql = format!("UPDATE tasks SET {} WHERE id = ?", set_clauses.join(", "));
+    conn.execute(&sql, rusqlite::params_from_iter(params))?;
+
+    Ok(())
 }
 
 pub fn clear_screen() {
