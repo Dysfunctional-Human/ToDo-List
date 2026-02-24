@@ -1,6 +1,6 @@
 use rusqlite::{Connection, Row, params};
 use crate::models::{Task, TaskError, TaskStatus, PriorityOrder};
-use chrono::{Duration, Utc};
+use chrono::{Duration, Utc, NaiveDate};
 use std::process::{self, Command};
 
 pub fn init_db() -> rusqlite::Result<Connection> {
@@ -23,6 +23,16 @@ pub fn init_db() -> rusqlite::Result<Connection> {
         ",
     )?;
     Ok(conn)
+}
+
+pub fn validate_date_format(
+    date_str: &str
+) -> Result<(), TaskError> {
+    NaiveDate::parse_from_str(date_str, "%d/%m/%Y")
+        .map_err(|_| TaskError::InvalidDateFormat(
+            format!("Invalid date '{}'. Use dd/mm/yyyy format", date_str)
+        ))?;
+    Ok(())
 }
 
 pub fn create_task(
@@ -118,7 +128,7 @@ pub fn check_task_exists_by_id(
         |row| row.get::<_, u64>(0)
      ) {
         Ok(_) => Ok(()),
-        Err(e) => return Err(TaskError::DatabaseError(e))
+        Err(_e) => return Err(TaskError::NoTaskFound("Task corresponding to this id does not exist".to_string()))
      }
 }
 
@@ -331,6 +341,18 @@ pub fn update_task_by_id(
     Ok(())
 }
 
+pub fn search_by_string(
+    conn: &Connection,
+    search_key: String
+) -> Result<Vec<Task>, TaskError> {
+    let pattern = format!("%{}%", search_key);
+
+    let mut query = conn.prepare("SELECT * FROM tasks WHERE title LIKE ?1 OR notes LIKE ?1")?;
+    let rows = query.query_map([pattern], |row| parse_all_columns(row))?;
+    let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
+    Ok(tasks)
+}
+
 pub fn get_stats(
     conn: &Connection
 ) -> Result<Vec<u64>, TaskError> {
@@ -355,18 +377,6 @@ pub fn get_stats(
         ])
     )?;
     Ok(stats)
-}
-
-pub fn search_by_string(
-    conn: &Connection,
-    search_key: String
-) -> Result<Vec<Task>, TaskError> {
-    let pattern = format!("%{}%", search_key);
-
-    let mut query = conn.prepare("SELECT * FROM tasks WHERE title LIKE ?1 OR notes LIKE ?1")?;
-    let rows = query.query_map([pattern], |row| parse_all_columns(row))?;
-    let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
-    Ok(tasks)
 }
 
 pub fn clear_screen() {

@@ -7,22 +7,127 @@ use crate::{
                                create_task, exit_app, get_all_tasks, get_deleted_tasks, 
                                get_due_tasks, get_stats, get_tasks_by_priority, get_tasks_by_status, 
                                init_db, purge_task, restore_task, search_by_string, show_task_by_id, 
-                               soft_delete_task, update_status, update_task_by_id
+                               soft_delete_task, update_status, update_task_by_id, validate_date_format
     }, models::{Task, TaskError, TaskStatus}
 };
 
 fn display_help() {
-    let help: &str = "
-    Welcome to ToDo list.
-    Structure of query:
-        command [Arguments]
-    
-    Supported Commands:
-        help - Displays this help message
-            usage: >help
-    
-    arguments:
-    ";  
+    let help = r#"
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                            ToDo List - Help                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+USAGE: command [arguments] [options]
+
+────────────────────────────────────────────────────────────────────────────────
+ADDING & VIEWING TASKS
+────────────────────────────────────────────────────────────────────────────────
+
+  add <title> [options]       Add a new task
+      --priority <PRIORITY>   Set priority: low, medium, high
+      --due <DATE>            Set due date (dd/mm/yyyy)
+      --notes <TEXT>          Add notes (supports multiple words)
+
+      Examples:
+        add Buy groceries
+        add Doctor appointment --priority high --due 25/02/2026
+        add Submit report --notes remember to include charts --priority medium
+
+  show <id>                   Display detailed view of a single task
+      Example: show 5
+
+  list [options]              List tasks (defaults to ongoing tasks)
+      --all                   Show all tasks (excluding deleted)
+      --completed             Show only completed tasks
+      --ongoing               Show only ongoing tasks
+      --low                   Show only low priority tasks
+      --medium                Show only medium priority tasks
+      --high                  Show only high priority tasks
+      --deleted               Show only deleted tasks
+      --all --deleted         Show everything including deleted
+
+      Examples:
+        list                  (shows ongoing tasks)
+        list --completed
+        list --high
+        list --all --deleted
+
+  search <keywords>           Search tasks by title or notes
+      Example: search doctor appointment
+
+────────────────────────────────────────────────────────────────────────────────
+MANAGING TASK STATUS
+────────────────────────────────────────────────────────────────────────────────
+
+  done <id>                   Mark a task as completed
+      Example: done 3
+
+  reopen <id>                 Reopen a completed task (set back to ongoing)
+      Example: reopen 3
+
+────────────────────────────────────────────────────────────────────────────────
+UPDATING TASKS
+────────────────────────────────────────────────────────────────────────────────
+
+  update <id> [options]       Update task fields (all options are optional)
+      --title <TEXT>          Change the title
+      --due <DATE>            Change the due date (dd/mm/yyyy)
+      --priority <PRIORITY>   Change priority: low, medium, high
+      --notes <TEXT>          Change the notes
+
+      Examples:
+        update 5 --priority high
+        update 5 --title New task title --due 01/03/2026
+        update 5 --notes updated notes here
+
+────────────────────────────────────────────────────────────────────────────────
+DELETING & RESTORING TASKS
+────────────────────────────────────────────────────────────────────────────────
+
+  delete <id>                 Soft delete a task (can be restored)
+      Example: delete 7
+
+  restore <id>                Restore a soft-deleted task
+      Example: restore 7
+
+  purge <id>                  Permanently delete a specific task
+  purge --all                 Permanently delete ALL soft-deleted tasks
+      Examples:
+        purge 7
+        purge --all
+
+────────────────────────────────────────────────────────────────────────────────
+DUE DATES & STATISTICS
+────────────────────────────────────────────────────────────────────────────────
+
+  due [options]               Show tasks by due date
+      --today                 Tasks due today
+      --tomorrow              Tasks due tomorrow
+
+      Examples:
+        due --today
+        due --tomorrow
+
+  stats                       Display task statistics
+                              (total, ongoing, completed, by priority)
+
+────────────────────────────────────────────────────────────────────────────────
+UTILITY COMMANDS
+────────────────────────────────────────────────────────────────────────────────
+
+  help                        Display this help message
+  clear                       Clear the screen
+  exit, quit                  Exit the application
+
+────────────────────────────────────────────────────────────────────────────────
+NOTES
+────────────────────────────────────────────────────────────────────────────────
+  - Date format: dd/mm/yyyy (e.g., 25/02/2026)
+  - Priority values: low, medium, high (lowercase)
+  - Multi-word titles/notes don't need quotes
+  - Task IDs can be found using 'list' or 'search'
+
+"#;
 
     println!("{}", help)
 }
@@ -43,6 +148,9 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
         Commands::Add { title, priority, due, notes } => {
             let task_name = title.join(" ");
             let extras = notes.map(|n| n.join(" "));
+            if let Some(ref due_date) = due {
+                validate_date_format(&due_date)?;
+            }
 
             let task = Task {
                 id: 0,
@@ -139,6 +247,9 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             check_task_exists_by_id(&conn, id)?;
             let new_title = title.map(|n| n.join(" "));
             let new_notes = notes.map(|n| n.join(" "));
+            if let Some(ref due_date) = due {
+                validate_date_format(&due_date)?;
+            }
 
             update_task_by_id(&conn, id, new_title, due, priority, new_notes)?;
             let updated_task = show_task_by_id(&conn, id)?;

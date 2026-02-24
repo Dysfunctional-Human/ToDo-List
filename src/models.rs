@@ -66,7 +66,9 @@ impl PriorityOrder {
 pub enum TaskError {
     DatabaseError(rusqlite::Error),
     InvalidInput(String),
-    DuplicateTask(String)
+    DuplicateTask(String),
+    InvalidDateFormat(String),
+    NoTaskFound(String)
 }
 
 impl From<rusqlite::Error> for TaskError {
