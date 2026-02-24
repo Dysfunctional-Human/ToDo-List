@@ -331,6 +331,32 @@ pub fn update_task_by_id(
     Ok(())
 }
 
+pub fn get_stats(
+    conn: &Connection
+) -> Result<Vec<u64>, TaskError> {
+    let stats = conn.query_row(
+        "SELECT 
+            SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) as total,
+            SUM(CASE WHEN status = 'Ongoing' AND deleted_at IS NULL THEN 1 ELSE 0 END) as ongoing,
+            SUM(CASE WHEN status = 'Completed' AND deleted_at IS NULL THEN 1 ELSE 0 END) as completed,
+            SUM(CASE WHEN priority = 'High' AND deleted_at IS NULL THEN 1 ELSE 0 END) as high_priority,
+            SUM(CASE WHEN priority = 'Medium' AND deleted_at IS NULL THEN 1 ELSE 0 END) as medium_priority,
+            SUM(CASE WHEN priority = 'Low' AND deleted_at IS NULL THEN 1 ELSE 0 END) as low_priority
+        FROM tasks
+        ",
+        [],
+        |row| Ok(vec![
+            row.get(0)?,
+            row.get(1)?,
+            row.get(2)?,
+            row.get(3)?,
+            row.get(4)?,
+            row.get(5)?
+        ])
+    )?;
+    Ok(stats)
+}
+
 pub fn search_by_string(
     conn: &Connection,
     search_key: String

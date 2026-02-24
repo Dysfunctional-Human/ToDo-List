@@ -5,9 +5,9 @@ pub mod db;
 use crate::{
     cli::{Cli, Commands}, db::{check_for_redundancy, check_task_exists_by_id, clear_screen, 
                                create_task, exit_app, get_all_tasks, get_deleted_tasks, 
-                               get_due_tasks, get_tasks_by_priority, get_tasks_by_status, 
-                               init_db, purge_task, restore_task, search_by_string, 
-                               show_task_by_id, soft_delete_task, update_status, update_task_by_id
+                               get_due_tasks, get_stats, get_tasks_by_priority, get_tasks_by_status, 
+                               init_db, purge_task, restore_task, search_by_string, show_task_by_id, 
+                               soft_delete_task, update_status, update_task_by_id
     }, models::{Task, TaskError, TaskStatus}
 };
 
@@ -151,6 +151,17 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             for (i, matching_row) in matching_rows.iter().enumerate() {
                 println!("{}. {}", i+1, matching_row)
             }
+            Ok(())
+        },
+        Commands::Stats {} => {
+            // Total tasks, total ongoing, total completed, total low priority, total medium priority, total high priority
+            let stats = get_stats(&conn)?;
+            println!("Total: {}", stats[0]);
+            println!("Ongoing: {}", stats[1]);
+            println!("Completed: {}", stats[2]);
+            println!("Low priority: {}", stats[3]);
+            println!("Medium priority: {}", stats[4]);
+            println!("High priority: {}", stats[5]);
             Ok(())
         },
         Commands::Help {} => {

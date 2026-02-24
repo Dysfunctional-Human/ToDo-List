@@ -118,6 +118,7 @@ pub enum Commands {
         /// keyword(s)
         search_string: Vec<String>
     },
+    Stats {},
     Help {},
     Clear {},
     #[command(alias="quit")]
