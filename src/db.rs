@@ -331,6 +331,18 @@ pub fn update_task_by_id(
     Ok(())
 }
 
+pub fn search_by_string(
+    conn: &Connection,
+    search_key: String
+) -> Result<Vec<Task>, TaskError> {
+    let pattern = format!("%{}%", search_key);
+
+    let mut query = conn.prepare("SELECT * FROM tasks WHERE title LIKE ?1 OR notes LIKE ?1")?;
+    let rows = query.query_map([pattern], |row| parse_all_columns(row))?;
+    let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
+    Ok(tasks)
+}
+
 pub fn clear_screen() {
     #[cfg(target_os = "windows")]
     {

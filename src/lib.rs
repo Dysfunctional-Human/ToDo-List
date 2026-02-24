@@ -3,7 +3,11 @@ mod cli;
 mod models;
 pub mod db;
 use crate::{
-    cli::{Cli, Commands}, db::{check_for_redundancy, check_task_exists_by_id, clear_screen, create_task, exit_app, get_all_tasks, get_deleted_tasks, get_due_tasks, get_tasks_by_priority, get_tasks_by_status, init_db, purge_task, restore_task, show_task_by_id, soft_delete_task, update_status, update_task_by_id
+    cli::{Cli, Commands}, db::{check_for_redundancy, check_task_exists_by_id, clear_screen, 
+                               create_task, exit_app, get_all_tasks, get_deleted_tasks, 
+                               get_due_tasks, get_tasks_by_priority, get_tasks_by_status, 
+                               init_db, purge_task, restore_task, search_by_string, 
+                               show_task_by_id, soft_delete_task, update_status, update_task_by_id
     }, models::{Task, TaskError, TaskStatus}
 };
 
@@ -141,7 +145,15 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             println!("Update Successful! Task: {}", updated_task);
             Ok(())
         },
-        Commands::Help {  } => {
+        Commands::Search { search_string } => {
+            let search_key = search_string.join(" ");
+            let matching_rows = search_by_string(&conn, search_key)?;
+            for (i, matching_row) in matching_rows.iter().enumerate() {
+                println!("{}. {}", i+1, matching_row)
+            }
+            Ok(())
+        },
+        Commands::Help {} => {
             display_help();
             Ok(())
         },
@@ -154,6 +166,5 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             exit_app();
             Ok(())
         }
-        // ToDo - 1. Updated_at for the commands, completed_at for the commands
     }
 }

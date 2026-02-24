@@ -3,6 +3,7 @@ use crate::models::PriorityOrder;
 #[derive(Parser)]
 #[command(name="todo")]
 #[command(about="A simple todo list application")]
+#[command(disable_help_subcommand = true)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Commands
@@ -112,6 +113,10 @@ pub enum Commands {
         /// notes
         #[arg(long, num_args = 1..)]
         notes: Option<Vec<String>>
+    },
+    Search {
+        /// keyword(s)
+        search_string: Vec<String>
     },
     Help {},
     Clear {},
