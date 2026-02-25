@@ -78,7 +78,7 @@ pub enum Commands {
         id: u64
     },
     Purge {
-        // Permanently delete task by id (works on both - existing and soft-deleted tasks)
+        // Permanently delete task by id (works only on soft-deleted tasks)
         id: Option<u64>,
 
         // Permanently delete all soft deleted tasks

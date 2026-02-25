@@ -19,13 +19,14 @@ impl fmt::Display for Task {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Task #id: {} -> {} [{}] - Created: {}{}{}",
+            "Task #id: {} -> {} [{}] - Created: {}{}{}{}",
             self.id,
             self.title,
             self.status.as_str(),
             self.created_at,
             self.priority.as_ref().map_or(String::new(), |p| format!(" | Priority: {}", p.as_str())),
-            self.notes.as_ref().map_or(String::new(), |n| format!(" | Notes: {}", n))
+            self.notes.as_ref().map_or(String::new(), |n| format!(" | Notes: {}", n)),
+            self.deleted_at.as_ref().map_or(String::new(), |d| format!(" | DELETED: {}", d))
         )
     }
 }
@@ -68,7 +69,7 @@ pub enum TaskError {
     InvalidInput(String),
     DuplicateTask(String),
     InvalidDateFormat(String),
-    NoTaskFound(String)
+    NoTaskFound(String),
 }
 
 impl From<rusqlite::Error> for TaskError {

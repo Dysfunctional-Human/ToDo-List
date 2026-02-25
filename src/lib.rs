@@ -1,4 +1,5 @@
 use clap::Parser;
+use rusqlite::Connection;
 mod cli;
 mod models;
 pub mod db;
@@ -6,7 +7,7 @@ use crate::{
     cli::{Cli, Commands}, db::{check_for_redundancy, check_task_exists_by_id, clear_screen, 
                                create_task, exit_app, get_all_tasks, get_deleted_tasks, 
                                get_due_tasks, get_stats, get_tasks_by_priority, get_tasks_by_status, 
-                               init_db, purge_task, restore_task, search_by_string, show_task_by_id, 
+                               purge_task, restore_task, search_by_string, show_task_by_id, 
                                soft_delete_task, update_status, update_task_by_id, validate_date_format
     }, models::{Task, TaskError, TaskStatus}
 };
@@ -132,7 +133,7 @@ NOTES
     println!("{}", help)
 }
 
-pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
+pub fn parse_arguments(conn: &Connection, args: Vec<&str>) -> Result<(), TaskError> {
     let mut clap_args = vec!["todo"];
     clap_args.extend(args);
     let cli = match Cli::try_parse_from(clap_args) {
@@ -142,11 +143,13 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
             return Ok(());  // Prevent crashing on bad input
         }
     };
-    let conn = init_db()?;
 
     match cli.command {
         Commands::Add { title, priority, due, notes } => {
             let task_name = title.join(" ");
+            if task_name.trim().is_empty() {
+                return Err(TaskError::InvalidInput("Task title cannot be empty".to_string()));
+            }
             let extras = notes.map(|n| n.join(" "));
             if let Some(ref due_date) = due {
                 validate_date_format(&due_date)?;
@@ -178,26 +181,41 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
         Commands::List { all, completed, ongoing, low, medium, high, deleted} => {
             if completed || ongoing {
                 let by_status = get_tasks_by_status(&conn, all, completed, ongoing)?;
+                if by_status.is_empty() {
+                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                }
                 for (i, task) in by_status.iter().enumerate() {
                     println!("{}. {}", i+1, task)
                 }
             } else if low || medium || high {
                 let by_priority = get_tasks_by_priority(&conn, low, medium, high, all)?;
+                if by_priority.is_empty() {
+                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                } 
                 for (i, task) in by_priority.iter().enumerate() {
                     println!("{}. {}", i+1, task)
                 }
             } else if deleted {
-                let deleted_tasks = get_deleted_tasks(&conn)?;
+                let deleted_tasks = get_deleted_tasks(&conn, all)?;
+                if deleted_tasks.is_empty() {
+                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                }
                 for (i, task) in deleted_tasks.iter().enumerate() {
                     println!("{}. {}", i+1, task)
                 }
             }  else if all {
                 let all_tasks = get_all_tasks(&conn)?;
+                if all_tasks.is_empty() {
+                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                }
                 for (i, task) in all_tasks.iter().enumerate() {
                     println!("{}. {}", i+1, task)
                 }
             } else {
                 let by_status = get_tasks_by_status(&conn, false, false, true)?;
+                if by_status.is_empty() {
+                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                }
                 for (i, task) in by_status.iter().enumerate() {
                     println!("{}. {}", i+1, task)
                 }
@@ -238,6 +256,9 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
         },
         Commands::Due { today, tomorrow } => {
             let due_tasks = get_due_tasks(&conn, today, tomorrow)?;
+            if due_tasks.is_empty() {
+                return Err(TaskError::NoTaskFound("No tasks found with the given due date".to_string()));
+            }
             for (i, task) in due_tasks.iter().enumerate() {
                 println!("{}. {}", i+1, task)
             }
@@ -246,6 +267,11 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
         Commands::Update { id, title, due, priority, notes } => {
             check_task_exists_by_id(&conn, id)?;
             let new_title = title.map(|n| n.join(" "));
+            if let Some(ref t) = new_title {
+                if t.trim().is_empty() {
+                    return Err(TaskError::InvalidInput("Task title cannot be empty".to_string()));
+                }
+            }
             let new_notes = notes.map(|n| n.join(" "));
             if let Some(ref due_date) = due {
                 validate_date_format(&due_date)?;
@@ -258,21 +284,30 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
         },
         Commands::Search { search_string } => {
             let search_key = search_string.join(" ");
+            if search_key.trim().is_empty() {
+                return Err(TaskError::InvalidInput("Search query cannot be empty".to_string()))
+            }
             let matching_rows = search_by_string(&conn, search_key)?;
+            if matching_rows.is_empty() {
+                return Err(TaskError::NoTaskFound("No tasks found".to_string()));
+            }
             for (i, matching_row) in matching_rows.iter().enumerate() {
                 println!("{}. {}", i+1, matching_row)
             }
             Ok(())
         },
         Commands::Stats {} => {
-            // Total tasks, total ongoing, total completed, total low priority, total medium priority, total high priority
             let stats = get_stats(&conn)?;
-            println!("Total: {}", stats[0]);
-            println!("Ongoing: {}", stats[1]);
-            println!("Completed: {}", stats[2]);
-            println!("Low priority: {}", stats[3]);
-            println!("Medium priority: {}", stats[4]);
-            println!("High priority: {}", stats[5]);
+            if stats.len() >= 6 {
+                println!("Total: {}", stats[0]);
+                println!("Ongoing: {}", stats[1]);
+                println!("Completed: {}", stats[2]);
+                println!("High priority: {}", stats[3]);
+                println!("Medium priority: {}", stats[4]);
+                println!("Low priority: {}", stats[5]);
+            } else {
+                eprintln!("Error: Unexpected stats format");
+            }
             Ok(())
         },
         Commands::Help {} => {
@@ -286,7 +321,6 @@ pub fn parse_arguments(args: Vec<&str>) -> Result<(), TaskError> {
         Commands::Exit {} => {
             println!("Bye Bye...👋"); 
             exit_app();
-            Ok(())
         }
     }
 }

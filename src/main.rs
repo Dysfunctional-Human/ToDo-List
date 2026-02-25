@@ -4,7 +4,7 @@ use std::io::stdin; // To read user input
 use std::io::stdout;    // To display output
 use to_do::db::init_db;  // Use the library crate's db module
 
-fn runprompt(_conn: &Connection) {
+fn runprompt(conn: &Connection) {
     loop {
         let mut output = stdout();  // Creates a handle standard output. Made mutable so it 
         // can be flushed
@@ -32,12 +32,10 @@ fn runprompt(_conn: &Connection) {
             continue;
         }
 
-        match to_do::parse_arguments(args) {
+        match to_do::parse_arguments(&conn, args) {
             Ok(()) => {},
             Err(e) => eprintln!("Error: {:?}", e)
         }
-        // println!("{:?}", conn);
-        // to_do::run();
     }    
 }
 
@@ -45,8 +43,4 @@ fn main() {
     let conn = init_db()
                .expect("Failed to initialize the database");
     runprompt(&conn);   // Passes to runprompt to fill the vector
-    // let tk = to_do::main();
-    // let mut td = vec![tk];
-    // runprompt(&mut td);
-    // println!("main");
 }
