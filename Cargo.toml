@@ -1,6 +1,6 @@
 [package]
 name = "to_do_cli"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 default-run = "to_do_cli"
 description = "Feature-rich command-line todo app with SQLite storage"
@@ -8,7 +8,7 @@ license = "LGPL-2.1"
 readme = "README.md"
 repository = "https://github.com/Dysfunctional-Human/ToDo-List"
 homepage = "https://github.com/Dysfunctional-Human/ToDo-List"
-documentation = "https://docs.rs/to_do"
+documentation = "`https://docs.rs/to_do_cli"
 keywords = ["todo", "cli", "task-manager", "sqlite"]
 categories = ["command-line-utilities"]
 exclude = ["todo.db", ".github/*"]
