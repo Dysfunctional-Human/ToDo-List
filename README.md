@@ -173,4 +173,4 @@ to_do/
 
 ## License
 
-MIT
+LGPL-2.1
