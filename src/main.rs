@@ -2,7 +2,7 @@ use rusqlite::Connection;
 use std::io::Write;
 use std::io::stdin; // To read user input
 use std::io::stdout;    // To display output
-use to_do::db::init_db;  // Use the library crate's db module
+use to_do_cli::db::init_db;  // Use the library crate's db module
 
 fn runprompt(conn: &Connection) {
     loop {
@@ -32,7 +32,7 @@ fn runprompt(conn: &Connection) {
             continue;
         }
 
-        match to_do::parse_arguments(&conn, args) {
+        match to_do_cli::parse_arguments(&conn, args) {
             Ok(()) => {},
             Err(e) => eprintln!("Error: {:?}", e)
         }

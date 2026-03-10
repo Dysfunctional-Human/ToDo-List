@@ -1,8 +1,8 @@
 [package]
-name = "to_do"
+name = "to_do_cli"
 version = "0.1.0"
 edition = "2024"
-default-run = "to_do"
+default-run = "to_do_cli"
 description = "Feature-rich command-line todo app with SQLite storage"
 license = "LGPL-2.1"
 readme = "README.md"
