@@ -139,7 +139,11 @@ pub fn parse_arguments(conn: &Connection, args: Vec<&str>) -> Result<(), TaskErr
     let cli = match Cli::try_parse_from(clap_args) {
         Ok(cli) => cli,
         Err(e) => {
-            eprintln!("{}", e);
+            let error_text = e.to_string().replace(
+                "For more information, try '--help'.",
+                "For more information, type 'help'.",
+            );
+            eprintln!("{}", error_text);
             return Ok(());  // Prevent crashing on bad input
         }
     };
