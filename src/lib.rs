@@ -1,15 +1,19 @@
 use clap::Parser;
 use rusqlite::Connection;
 mod cli;
-mod models;
 pub mod db;
+mod models;
+mod seed;
 use crate::{
-    cli::{Cli, Commands}, db::{check_for_redundancy, check_task_exists_by_id, clear_screen, 
-                               create_task, exit_app, get_all_tasks, get_deleted_tasks, 
-                               get_due_tasks, get_stats, get_tasks_by_priority, get_tasks_by_status, 
-                               purge_task, restore_task, search_by_string, show_task_by_id, 
-                               soft_delete_task, update_status, update_task_by_id, validate_date_format
-    }, models::{Task, TaskError, TaskStatus}
+    cli::{Cli, Commands},
+    db::{
+        check_for_redundancy, check_task_exists_by_id, clear_screen, create_task, exit_app,
+        get_all_tasks, get_deleted_tasks, get_due_tasks, get_stats, get_tasks_by_priority,
+        get_tasks_by_status, purge_task, restore_task, search_by_string, show_task_by_id,
+        soft_delete_task, update_status, update_task_by_id, validate_date_format,
+    },
+    models::{Task, TaskError, TaskStatus},
+    seed::seed_database,
 };
 
 fn display_help() {
@@ -144,15 +148,22 @@ pub fn parse_arguments(conn: &Connection, args: Vec<&str>) -> Result<(), TaskErr
                 "For more information, type 'help'.",
             );
             eprintln!("{}", error_text);
-            return Ok(());  // Prevent crashing on bad input
+            return Ok(()); // Prevent crashing on bad input
         }
     };
 
     match cli.command {
-        Commands::Add { title, priority, due, notes } => {
+        Commands::Add {
+            title,
+            priority,
+            due,
+            notes,
+        } => {
             let task_name = title.join(" ");
             if task_name.trim().is_empty() {
-                return Err(TaskError::InvalidInput("Task title cannot be empty".to_string()));
+                return Err(TaskError::InvalidInput(
+                    "Task title cannot be empty".to_string(),
+                ));
             }
             let extras = notes.map(|n| n.join(" "));
             if let Some(ref due_date) = due {
@@ -169,111 +180,129 @@ pub fn parse_arguments(conn: &Connection, args: Vec<&str>) -> Result<(), TaskErr
                 deleted_at: None,
                 due_at: due,
                 priority: priority,
-                notes: extras
+                notes: extras,
             };
             check_for_redundancy(&conn, &task)?;
             let new_id = create_task(&conn, &task)?;
             let new_task = show_task_by_id(&conn, new_id)?;
             println!("Task added successfully: {}", new_task);
             Ok(())
-        },
+        }
         Commands::Show { id } => {
             let task = show_task_by_id(&conn, id)?;
             println!("{}", task);
             Ok(())
-        },
-        Commands::List { all, completed, ongoing, low, medium, high, deleted} => {
+        }
+        Commands::List {
+            all,
+            completed,
+            ongoing,
+            low,
+            medium,
+            high,
+            deleted,
+        } => {
             if completed || ongoing {
                 let by_status = get_tasks_by_status(&conn, all, completed, ongoing)?;
                 if by_status.is_empty() {
-                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                    return Err(TaskError::NoTaskFound("No task found".to_string()));
                 }
                 for (i, task) in by_status.iter().enumerate() {
-                    println!("{}. {}", i+1, task)
+                    println!("{}. {}", i + 1, task)
                 }
             } else if low || medium || high {
                 let by_priority = get_tasks_by_priority(&conn, low, medium, high, all)?;
                 if by_priority.is_empty() {
-                    return Err(TaskError::NoTaskFound("No task found".to_string()))
-                } 
+                    return Err(TaskError::NoTaskFound("No task found".to_string()));
+                }
                 for (i, task) in by_priority.iter().enumerate() {
-                    println!("{}. {}", i+1, task)
+                    println!("{}. {}", i + 1, task)
                 }
             } else if deleted {
                 let deleted_tasks = get_deleted_tasks(&conn, all)?;
                 if deleted_tasks.is_empty() {
-                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                    return Err(TaskError::NoTaskFound("No task found".to_string()));
                 }
                 for (i, task) in deleted_tasks.iter().enumerate() {
-                    println!("{}. {}", i+1, task)
+                    println!("{}. {}", i + 1, task)
                 }
-            }  else if all {
+            } else if all {
                 let all_tasks = get_all_tasks(&conn)?;
                 if all_tasks.is_empty() {
-                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                    return Err(TaskError::NoTaskFound("No task found".to_string()));
                 }
                 for (i, task) in all_tasks.iter().enumerate() {
-                    println!("{}. {}", i+1, task)
+                    println!("{}. {}", i + 1, task)
                 }
             } else {
                 let by_status = get_tasks_by_status(&conn, false, false, true)?;
                 if by_status.is_empty() {
-                    return Err(TaskError::NoTaskFound("No task found".to_string()))
+                    return Err(TaskError::NoTaskFound("No task found".to_string()));
                 }
                 for (i, task) in by_status.iter().enumerate() {
-                    println!("{}. {}", i+1, task)
+                    println!("{}. {}", i + 1, task)
                 }
             }
             Ok(())
-        },
+        }
         Commands::Done { id } => {
             check_task_exists_by_id(&conn, id)?;
             update_status(&conn, id, TaskStatus::Completed)?;
             let new_task = show_task_by_id(&conn, id)?;
             println!("Updated Task: {}", new_task);
             Ok(())
-        },
+        }
         Commands::Reopen { id } => {
             check_task_exists_by_id(&conn, id)?;
             update_status(&conn, id, TaskStatus::Ongoing)?;
             let new_task = show_task_by_id(&conn, id)?;
             println!("Updated Task: {}", new_task);
             Ok(())
-        },
+        }
         Commands::Delete { id } => {
             check_task_exists_by_id(&conn, id)?;
             soft_delete_task(&conn, id)?;
             println!("Task deleted successfully");
             Ok(())
-        },
+        }
         Commands::Restore { id } => {
             check_task_exists_by_id(&conn, id)?;
             restore_task(&conn, id)?;
             let task = show_task_by_id(&conn, id)?;
             println!("Restored Task: {}", task);
             Ok(())
-        },
+        }
         Commands::Purge { id, all } => {
             purge_task(&conn, id, all)?;
             println!("Task(s) permanently deleted");
             Ok(())
-        },
+        }
         Commands::Due { today, tomorrow } => {
             let due_tasks = get_due_tasks(&conn, today, tomorrow)?;
             if due_tasks.is_empty() {
-                return Err(TaskError::NoTaskFound("No tasks found with the given due date".to_string()));
+                return Err(TaskError::NoTaskFound(
+                    "No tasks found with the given due date".to_string(),
+                ));
             }
             for (i, task) in due_tasks.iter().enumerate() {
-                println!("{}. {}", i+1, task)
+                println!("{}. {}", i + 1, task)
             }
             Ok(())
-        },
-        Commands::Update { id, title, due, priority, notes } => {
+        }
+        Commands::Update {
+            id,
+            title,
+            due,
+            priority,
+            notes,
+        } => {
             check_task_exists_by_id(&conn, id)?;
             let new_title = title.map(|n| n.join(" "));
             if let Some(ref t) = new_title {
                 if t.trim().is_empty() {
-                    return Err(TaskError::InvalidInput("Task title cannot be empty".to_string()));
+                    return Err(TaskError::InvalidInput(
+                        "Task title cannot be empty".to_string(),
+                    ));
                 }
             }
             let new_notes = notes.map(|n| n.join(" "));
@@ -285,21 +314,23 @@ pub fn parse_arguments(conn: &Connection, args: Vec<&str>) -> Result<(), TaskErr
             let updated_task = show_task_by_id(&conn, id)?;
             println!("Update Successful! Task: {}", updated_task);
             Ok(())
-        },
+        }
         Commands::Search { search_string } => {
             let search_key = search_string.join(" ");
             if search_key.trim().is_empty() {
-                return Err(TaskError::InvalidInput("Search query cannot be empty".to_string()))
+                return Err(TaskError::InvalidInput(
+                    "Search query cannot be empty".to_string(),
+                ));
             }
             let matching_rows = search_by_string(&conn, search_key)?;
             if matching_rows.is_empty() {
                 return Err(TaskError::NoTaskFound("No tasks found".to_string()));
             }
             for (i, matching_row) in matching_rows.iter().enumerate() {
-                println!("{}. {}", i+1, matching_row)
+                println!("{}. {}", i + 1, matching_row)
             }
             Ok(())
-        },
+        }
         Commands::Stats {} => {
             let stats = get_stats(&conn)?;
             if stats.len() >= 6 {
@@ -313,18 +344,23 @@ pub fn parse_arguments(conn: &Connection, args: Vec<&str>) -> Result<(), TaskErr
                 eprintln!("Error: Unexpected stats format");
             }
             Ok(())
-        },
+        }
         Commands::Help {} => {
             display_help();
             Ok(())
-        },
-        Commands::Clear {} => { 
+        }
+        Commands::Clear {} => {
             clear_screen();
             Ok(())
-        },
+        }
         Commands::Exit {} => {
-            println!("Bye Bye...👋"); 
+            println!("Bye Bye...👋");
             exit_app();
+        }
+        Commands::Seed { reset } => {
+            seed_database(conn, reset)?;
+            println!("Seed complete.");
+            Ok(())
         }
     }
 }

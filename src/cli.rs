@@ -1,12 +1,12 @@
-use clap::{Parser, Subcommand};
 use crate::models::PriorityOrder;
+use clap::{Parser, Subcommand};
 #[derive(Parser)]
-#[command(name="todo")]
-#[command(about="A simple todo list application")]
+#[command(name = "todo")]
+#[command(about = "A simple todo list application")]
 #[command(disable_help_subcommand = true)]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Commands
+    pub command: Commands,
 }
 
 #[derive(Subcommand)]
@@ -26,11 +26,11 @@ pub enum Commands {
 
         /// Extra notes
         #[arg(long, num_args = 1..)]
-        notes: Option<Vec<String>>
+        notes: Option<Vec<String>>,
     },
     Show {
         /// Task id
-        id: u64
+        id: u64,
     },
     List {
         /// Show all tasks including deleted
@@ -40,15 +40,15 @@ pub enum Commands {
         /// Show only completed tasks
         #[arg(long, conflicts_with_all = ["ongoing", "low", "medium", "high", "deleted"])]
         completed: bool,
-        
-        /// Show only Ongoing tasks 
+
+        /// Show only Ongoing tasks
         #[arg(long, conflicts_with_all = ["completed", "low", "medium", "high", "deleted"])]
         ongoing: bool,
 
         /// Show only low priority tasks
         #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "high", "deleted"])]
         low: bool,
-        
+
         /// Show only medium priority tasks
         #[arg(long, conflicts_with_all = ["completed", "ongoing", "low", "high", "deleted"])]
         medium: bool,
@@ -59,23 +59,23 @@ pub enum Commands {
 
         /// Show only deleted tasks
         #[arg(long, conflicts_with_all = ["completed", "ongoing", "medium", "high"])]
-        deleted: bool
+        deleted: bool,
     },
     Done {
         /// Task id
-        id: u64
+        id: u64,
     },
     Reopen {
         /// Task id
-        id: u64
+        id: u64,
     },
     Delete {
         /// Task id
-        id: u64
+        id: u64,
     },
     Restore {
         /// Task id
-        id: u64
+        id: u64,
     },
     Purge {
         // Permanently delete task by id (works only on soft-deleted tasks)
@@ -83,16 +83,16 @@ pub enum Commands {
 
         // Permanently delete all soft deleted tasks
         #[arg(long, conflicts_with_all=["id"])]
-        all: bool
+        all: bool,
     },
     Due {
         /// Show tasks due today
         #[arg(long)]
         today: bool,
-        
+
         /// Show tasks due tomorrow
         #[arg(long)]
-        tomorrow: bool
+        tomorrow: bool,
     },
     Update {
         /// id
@@ -112,15 +112,21 @@ pub enum Commands {
 
         /// notes
         #[arg(long, num_args = 1..)]
-        notes: Option<Vec<String>>
+        notes: Option<Vec<String>>,
     },
     Search {
         /// keyword(s)
-        search_string: Vec<String>
+        search_string: Vec<String>,
+    },
+    #[command(hide = true)]
+    Seed {
+        /// Clear existing tasks before seeding
+        #[arg(long)]
+        reset: bool,
     },
     Stats {},
     Help {},
     Clear {},
-    #[command(alias="quit")]
-    Exit {}
+    #[command(alias = "quit")]
+    Exit {},
 }

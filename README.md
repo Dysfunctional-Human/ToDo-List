@@ -168,7 +168,7 @@ All dates must be in `dd/mm/yyyy` format:
 
 ## Project Structure
 
-```
+```bash
 ToDo-List/
 ├── src/
 │   ├── main.rs
@@ -187,6 +187,7 @@ ToDo-List/
 - [ ] Notes editor with multi-line support
 - [ ] Multi-device sync with authentication
 - [ ] WhatsApp integration for mobile access
+- [ ] Make sure all doc and clippy checks pass
 
 ## License
 

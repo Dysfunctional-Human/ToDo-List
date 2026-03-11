@@ -1,6 +1,6 @@
-use rusqlite::{Connection, Row, params};
-use crate::models::{Task, TaskError, TaskStatus, PriorityOrder};
+use crate::models::{PriorityOrder, Task, TaskError, TaskStatus};
 use chrono::{Duration, Local, NaiveDate};
+use rusqlite::{Connection, Row, params};
 use std::process::{self, Command};
 
 pub fn init_db() -> rusqlite::Result<Connection> {
@@ -25,20 +25,17 @@ pub fn init_db() -> rusqlite::Result<Connection> {
     Ok(conn)
 }
 
-pub fn validate_date_format(
-    date_str: &str
-) -> Result<(), TaskError> {
-    NaiveDate::parse_from_str(date_str, "%d/%m/%Y")
-        .map_err(|_| TaskError::InvalidDateFormat(
-            format!("Invalid date '{}'. Use dd/mm/yyyy format", date_str)
-        ))?;
+pub fn validate_date_format(date_str: &str) -> Result<(), TaskError> {
+    NaiveDate::parse_from_str(date_str, "%d/%m/%Y").map_err(|_| {
+        TaskError::InvalidDateFormat(format!(
+            "Invalid date '{}'. Use dd/mm/yyyy format",
+            date_str
+        ))
+    })?;
     Ok(())
 }
 
-pub fn create_task(
-    conn: &Connection,
-    new_task: &Task
-) -> Result<u64, TaskError> {
+pub fn create_task(conn: &Connection, new_task: &Task) -> Result<u64, TaskError> {
     let priority = new_task.priority.as_ref().map(|p| p.as_str());
     let now = Local::now().format("%d/%m/%Y").to_string();
 
@@ -46,9 +43,15 @@ pub fn create_task(
         "INSERT INTO tasks (title, status, created_at, due_at,
                             priority, notes)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-        "
-        , params![&new_task.title, &new_task.status.as_str(), now, 
-                  &new_task.due_at, priority, &new_task.notes]
+        ",
+        params![
+            &new_task.title,
+            &new_task.status.as_str(),
+            now,
+            &new_task.due_at,
+            priority,
+            &new_task.notes
+        ],
     )?;
 
     let new_id = conn.last_insert_rowid();
@@ -56,29 +59,28 @@ pub fn create_task(
     Ok(new_id as u64)
 }
 
-fn parse_all_columns(
-    row: &Row<'_>
-) -> rusqlite::Result<Task> {
+fn parse_all_columns(row: &Row<'_>) -> rusqlite::Result<Task> {
     let task_status: String = row.get(2)?;
     let status = match task_status.as_str() {
-            "Ongoing" => TaskStatus::Ongoing,
-            "Completed" => TaskStatus::Completed,
-            _ => {
-                eprintln!("Warning: Unknown status '{}' in database, treating as Ongoing", task_status);
-                TaskStatus::Ongoing
-            }
+        "Ongoing" => TaskStatus::Ongoing,
+        "Completed" => TaskStatus::Completed,
+        _ => {
+            eprintln!(
+                "Warning: Unknown status '{}' in database, treating as Ongoing",
+                task_status
+            );
+            TaskStatus::Ongoing
+        }
     };
 
     let task_priority: Option<String> = row.get(8)?;
-    let priority = task_priority.and_then(|p| {
-        match p.as_str() {
-            "High" => Some(PriorityOrder::High),
-            "Medium" => Some(PriorityOrder::Medium),
-            "Low" => Some(PriorityOrder::Low),
-            unknown => {
-                eprintln!("Warning: Unknown priority '{}' in database", unknown);
-                None
-            }
+    let priority = task_priority.and_then(|p| match p.as_str() {
+        "High" => Some(PriorityOrder::High),
+        "Medium" => Some(PriorityOrder::Medium),
+        "Low" => Some(PriorityOrder::Low),
+        unknown => {
+            eprintln!("Warning: Unknown priority '{}' in database", unknown);
+            None
         }
     });
 
@@ -92,27 +94,21 @@ fn parse_all_columns(
         deleted_at: row.get(6)?,
         due_at: row.get(7)?,
         priority: priority,
-        notes: row.get(9)?
-    })
+        notes: row.get(9)?,
+    });
 }
 
-pub fn show_task_by_id(
-    conn: &Connection,
-    task_id: u64
-) -> Result<Task, TaskError> {
+pub fn show_task_by_id(conn: &Connection, task_id: u64) -> Result<Task, TaskError> {
     let task_info = conn.query_row(
         "SELECT * FROM tasks WHERE id = ?1",
         params![task_id],
-        |row| parse_all_columns(row)
+        |row| parse_all_columns(row),
     )?;
 
     Ok(task_info)
 }
 
-pub fn check_for_redundancy(
-    conn: &Connection,
-    new_task: &Task
-) -> Result<(), TaskError> {
+pub fn check_for_redundancy(conn: &Connection, new_task: &Task) -> Result<(), TaskError> {
     match conn.query_row(
         "SELECT id FROM tasks WHERE (title = ?1 OR (notes IS NOT NULL AND notes = ?2)) AND deleted_at IS NULL",
         params![new_task.title, new_task.notes],
@@ -124,35 +120,32 @@ pub fn check_for_redundancy(
     }
 }
 
-pub fn check_task_exists_by_id(
-    conn: &Connection,
-    id: u64
-) -> Result<(), TaskError> {
-     match conn.query_row(
-        "SELECT id FROM tasks WHERE id = ?1",
-        params![id],
-        |row| row.get::<_, u64>(0)
-     ) {
+pub fn check_task_exists_by_id(conn: &Connection, id: u64) -> Result<(), TaskError> {
+    match conn.query_row("SELECT id FROM tasks WHERE id = ?1", params![id], |row| {
+        row.get::<_, u64>(0)
+    }) {
         Ok(_) => Ok(()),
-        Err(rusqlite::Error::QueryReturnedNoRows) => {
-            Err(TaskError::NoTaskFound("Task corresponding to this id does not exist".to_string()))
-        }
-        Err(e) => return Err(TaskError::DatabaseError(e))
-     }
+        Err(rusqlite::Error::QueryReturnedNoRows) => Err(TaskError::NoTaskFound(
+            "Task corresponding to this id does not exist".to_string(),
+        )),
+        Err(e) => return Err(TaskError::DatabaseError(e)),
+    }
 }
 
 pub fn get_tasks_by_status(
     conn: &Connection,
     all: bool,
     completed: bool,
-    ongoing: bool
+    ongoing: bool,
 ) -> Result<Vec<Task>, TaskError> {
     let status_str = if completed {
         "Completed"
     } else if ongoing {
         "Ongoing"
     } else {
-        return Err(TaskError::InvalidInput("Must specify either completed or ongoing".to_string()));
+        return Err(TaskError::InvalidInput(
+            "Must specify either completed or ongoing".to_string(),
+        ));
     };
     let mut query = if all {
         conn.prepare("SELECT * FROM tasks WHERE status = ?1")?
@@ -170,16 +163,18 @@ pub fn get_tasks_by_priority(
     low: bool,
     medium: bool,
     high: bool,
-    all: bool 
+    all: bool,
 ) -> Result<Vec<Task>, TaskError> {
     let priority_str = if low {
         "Low"
     } else if medium {
         "Medium"
-    } else if high{
+    } else if high {
         "High"
     } else {
-        return Err(TaskError::InvalidInput("Must specify either low, medium or high".to_string()));
+        return Err(TaskError::InvalidInput(
+            "Must specify either low, medium or high".to_string(),
+        ));
     };
 
     let mut query = if all {
@@ -192,22 +187,17 @@ pub fn get_tasks_by_priority(
     Ok(tasks)
 }
 
-pub fn get_all_tasks(
-    conn: &Connection
-) -> Result<Vec<Task>, TaskError> {
+pub fn get_all_tasks(conn: &Connection) -> Result<Vec<Task>, TaskError> {
     let mut query = conn.prepare("SELECT * FROM tasks WHERE deleted_at IS NULL")?;
     let rows = query.query_map([], |row| parse_all_columns(row))?;
     let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
     Ok(tasks)
 }
 
-pub fn get_deleted_tasks(
-    conn: &Connection,
-    all: bool
-) -> Result<Vec<Task>, TaskError> {
+pub fn get_deleted_tasks(conn: &Connection, all: bool) -> Result<Vec<Task>, TaskError> {
     let mut query = if all {
         conn.prepare("SELECT * FROM tasks")?
-    } else { 
+    } else {
         conn.prepare("SELECT * FROM tasks WHERE deleted_at IS NOT NULL")?
     };
     let rows = query.query_map([], |row| parse_all_columns(row))?;
@@ -218,7 +208,7 @@ pub fn get_deleted_tasks(
 pub fn update_status(
     conn: &Connection,
     id: u64,
-    updated_status: TaskStatus
+    updated_status: TaskStatus,
 ) -> Result<(), TaskError> {
     let date = Local::now().format("%d/%m/%Y").to_string();
     if updated_status == TaskStatus::Completed {
@@ -227,40 +217,40 @@ pub fn update_status(
             params![updated_status.as_str(), id, date]
         )?;
         if rows_affected == 0 {
-            return Err(TaskError::NoTaskFound("No task found for the given id, make sure the task isn't deleted".to_string()));
+            return Err(TaskError::NoTaskFound(
+                "No task found for the given id, make sure the task isn't deleted".to_string(),
+            ));
         }
     } else if updated_status == TaskStatus::Ongoing {
         let rows_affected = conn.execute(
             "UPDATE tasks SET status = ?1, updated_at = ?3, completed_at = NULL WHERE id = ?2 AND deleted_at IS NULL", 
             params![updated_status.as_str(), id, date]
-        )?; 
+        )?;
         if rows_affected == 0 {
-            return Err(TaskError::NoTaskFound("No task found for the given id, make sure the task isn't deleted".to_string()));
+            return Err(TaskError::NoTaskFound(
+                "No task found for the given id, make sure the task isn't deleted".to_string(),
+            ));
         }
     } else {
-        return  Err(TaskError::InvalidInput("Invalid Task Status".to_string()));
+        return Err(TaskError::InvalidInput("Invalid Task Status".to_string()));
     }
     Ok(())
 }
 
-pub fn soft_delete_task(
-    conn: &Connection,
-    id: u64
-) -> Result<(), TaskError> {
+pub fn soft_delete_task(conn: &Connection, id: u64) -> Result<(), TaskError> {
     let rows_affected = conn.execute(
         "UPDATE tasks SET deleted_at = ?1, updated_at = ?1 WHERE id = ?2 AND deleted_at IS NULL",
-        params![Local::now().format("%d/%m/%Y").to_string(), id]
+        params![Local::now().format("%d/%m/%Y").to_string(), id],
     )?;
     if rows_affected == 0 {
-        return Err(TaskError::InvalidInput("Task is already deleted".to_string()));
+        return Err(TaskError::InvalidInput(
+            "Task is already deleted".to_string(),
+        ));
     }
     Ok(())
 }
 
-pub fn restore_task(
-    conn: &Connection,
-    id: u64
-) -> Result<(), TaskError> {
+pub fn restore_task(conn: &Connection, id: u64) -> Result<(), TaskError> {
     let rows_affected = conn.execute(
         "UPDATE tasks SET deleted_at = NULL, updated_at = ?2 WHERE id = ?1 AND deleted_at IS NOT NULL",
         params![id, Local::now().format("%d/%m/%Y").to_string()]
@@ -271,30 +261,28 @@ pub fn restore_task(
     Ok(())
 }
 
-pub fn purge_task(
-    conn: &Connection,
-    id: Option<u64>,
-    all: bool
-) -> Result<(), TaskError> {
+pub fn purge_task(conn: &Connection, id: Option<u64>, all: bool) -> Result<(), TaskError> {
     if let Some(task_id) = id {
         check_task_exists_by_id(conn, task_id)?;
         let rows_affected = conn.execute(
             "DELETE FROM tasks WHERE id = ?1 AND deleted_at IS NOT NULL",
-            params![task_id]
+            params![task_id],
         )?;
         if rows_affected == 0 {
-            return Err(TaskError::InvalidInput("Task is not deleted. Use 'delete' first".to_string()));
+            return Err(TaskError::InvalidInput(
+                "Task is not deleted. Use 'delete' first".to_string(),
+            ));
         }
     } else if all {
-        let rows_affected = conn.execute(
-            "DELETE FROM tasks WHERE deleted_at IS NOT NULL",
-            params![]
-        )?;
+        let rows_affected =
+            conn.execute("DELETE FROM tasks WHERE deleted_at IS NOT NULL", params![])?;
         if rows_affected == 0 {
             return Err(TaskError::InvalidInput("No tasks to purge".to_string()));
         }
     } else {
-        return Err(TaskError::InvalidInput("Must specify either --all or a valid id".to_string()));
+        return Err(TaskError::InvalidInput(
+            "Must specify either --all or a valid id".to_string(),
+        ));
     }
 
     Ok(())
@@ -303,23 +291,38 @@ pub fn purge_task(
 pub fn get_due_tasks(
     conn: &Connection,
     today: bool,
-    tomorrow: bool
+    tomorrow: bool,
 ) -> Result<Vec<Task>, TaskError> {
     let today_str = Local::now().format("%d/%m/%Y").to_string();
-    let tomorrow_str = (Local::now() + Duration::days(1)).format("%d/%m/%Y").to_string();
-    
+    let tomorrow_str = (Local::now() + Duration::days(1))
+        .format("%d/%m/%Y")
+        .to_string();
+
     let (query_str, params): (&str, Vec<&str>) = if today && tomorrow {
-        ("SELECT * FROM tasks WHERE (due_at = ?1 OR due_at = ?2) AND deleted_at IS NULL AND status = 'Ongoing'", vec![&today_str, &tomorrow_str])
+        (
+            "SELECT * FROM tasks WHERE (due_at = ?1 OR due_at = ?2) AND deleted_at IS NULL AND status = 'Ongoing'",
+            vec![&today_str, &tomorrow_str],
+        )
     } else if today {
-        ("SELECT * FROM tasks WHERE due_at = ?1 AND deleted_at IS NULL AND status = 'Ongoing'", vec![&today_str])
+        (
+            "SELECT * FROM tasks WHERE due_at = ?1 AND deleted_at IS NULL AND status = 'Ongoing'",
+            vec![&today_str],
+        )
     } else if tomorrow {
-        ("SELECT * FROM tasks WHERE due_at = ?1 AND deleted_at IS NULL AND status = 'Ongoing'", vec![&tomorrow_str])
+        (
+            "SELECT * FROM tasks WHERE due_at = ?1 AND deleted_at IS NULL AND status = 'Ongoing'",
+            vec![&tomorrow_str],
+        )
     } else {
-        return Err(TaskError::InvalidInput("Must specify either --today or --tomorrow".to_string()));
+        return Err(TaskError::InvalidInput(
+            "Must specify either --today or --tomorrow".to_string(),
+        ));
     };
 
     let mut query = conn.prepare(query_str)?;
-    let rows = query.query_map(rusqlite::params_from_iter(params), |row| parse_all_columns(row))?;
+    let rows = query.query_map(rusqlite::params_from_iter(params), |row| {
+        parse_all_columns(row)
+    })?;
     let tasks: Vec<Task> = rows.collect::<Result<Vec<_>, _>>()?;
     Ok(tasks)
 }
@@ -330,7 +333,7 @@ pub fn update_task_by_id(
     title: Option<String>,
     due: Option<String>,
     priority: Option<PriorityOrder>,
-    notes: Option<String>
+    notes: Option<String>,
 ) -> Result<(), TaskError> {
     let date = Local::now().format("%d/%m/%Y").to_string();
     let mut set_clauses: Vec<String> = vec![];
@@ -365,21 +368,23 @@ pub fn update_task_by_id(
 
     params.push(Box::new(id));
 
-    let sql = format!("UPDATE tasks SET {} WHERE id = ? AND deleted_at IS NULL", set_clauses.join(", "));
+    let sql = format!(
+        "UPDATE tasks SET {} WHERE id = ? AND deleted_at IS NULL",
+        set_clauses.join(", ")
+    );
     let rows_affected = conn.execute(&sql, rusqlite::params_from_iter(params))?;
     if rows_affected == 0 {
-        return Err(TaskError::InvalidInput("Please make sure a task exists for the given id, and it is not deleted".to_string()));
+        return Err(TaskError::InvalidInput(
+            "Please make sure a task exists for the given id, and it is not deleted".to_string(),
+        ));
     }
     Ok(())
 }
 
-pub fn search_by_string(
-    conn: &Connection,
-    search_key: String
-) -> Result<Vec<Task>, TaskError> {
+pub fn search_by_string(conn: &Connection, search_key: String) -> Result<Vec<Task>, TaskError> {
     // Escape SQL LIKE wildcards
     let escaped = search_key
-        .replace("\\", "\\\\")  // Escape backslash first
+        .replace("\\", "\\\\") // Escape backslash first
         .replace("%", "\\%")
         .replace("_", "\\_");
     let pattern = format!("%{}%", escaped);
@@ -390,10 +395,7 @@ pub fn search_by_string(
     Ok(tasks)
 }
 
-
-pub fn get_stats(
-    conn: &Connection
-) -> Result<Vec<u64>, TaskError> {
+pub fn get_stats(conn: &Connection) -> Result<Vec<u64>, TaskError> {
     let stats = conn.query_row(
         "
         SELECT 

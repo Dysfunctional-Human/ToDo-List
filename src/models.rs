@@ -12,7 +12,7 @@ pub struct Task {
     pub deleted_at: Option<String>,
     pub due_at: Option<String>,
     pub priority: Option<PriorityOrder>,
-    pub notes: Option<String>
+    pub notes: Option<String>,
 }
 
 impl fmt::Display for Task {
@@ -24,9 +24,15 @@ impl fmt::Display for Task {
             self.title,
             self.status.as_str(),
             self.created_at,
-            self.priority.as_ref().map_or(String::new(), |p| format!(" | Priority: {}", p.as_str())),
-            self.notes.as_ref().map_or(String::new(), |n| format!(" | Notes: {}", n)),
-            self.deleted_at.as_ref().map_or(String::new(), |d| format!(" | DELETED: {}", d))
+            self.priority
+                .as_ref()
+                .map_or(String::new(), |p| format!(" | Priority: {}", p.as_str())),
+            self.notes
+                .as_ref()
+                .map_or(String::new(), |n| format!(" | Notes: {}", n)),
+            self.deleted_at
+                .as_ref()
+                .map_or(String::new(), |d| format!(" | DELETED: {}", d))
         )
     }
 }
@@ -34,14 +40,14 @@ impl fmt::Display for Task {
 #[derive(Debug, Clone, ValueEnum, PartialEq)]
 pub enum TaskStatus {
     Ongoing,
-    Completed
+    Completed,
 }
 
 impl TaskStatus {
     pub fn as_str(&self) -> &str {
         match self {
             TaskStatus::Ongoing => "Ongoing",
-            TaskStatus::Completed => "Completed"
+            TaskStatus::Completed => "Completed",
         }
     }
 }
@@ -50,7 +56,7 @@ impl TaskStatus {
 pub enum PriorityOrder {
     Low,
     Medium,
-    High
+    High,
 }
 
 impl PriorityOrder {
@@ -58,7 +64,7 @@ impl PriorityOrder {
         match self {
             PriorityOrder::High => "High",
             PriorityOrder::Medium => "Medium",
-            PriorityOrder::Low => "Low"
+            PriorityOrder::Low => "Low",
         }
     }
 }
