@@ -1,6 +1,6 @@
 [package]
 name = "to_do_cli"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 default-run = "to_do_cli"
 description = "Feature-rich command-line todo app with SQLite storage"
